@@ -1,4 +1,4 @@
-import 'package:calculator/splashScreen.dart';
+import 'package:calculator/splash_screen.dart';
 import 'package:calculator/theme_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

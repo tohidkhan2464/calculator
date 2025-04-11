@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:calculator/HomeScreen.dart';
+import 'package:calculator/home_screen.dart';
 import 'package:calculator/theme_constants.dart';
 import 'package:flutter/material.dart';
 
@@ -74,7 +74,7 @@ class SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,

@@ -15,7 +15,7 @@ if (localPropertiesFile.exists()) {
 
 def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
 if (flutterVersionCode == null) {
-    flutterVersionCode = "2"
+    flutterVersionCode = "3"
 }
 
 def flutterVersionName = localProperties.getProperty("flutter.versionName")
@@ -41,7 +41,7 @@ android {
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = 2 // Change this to a new version code
+        versionCode = 3 // Change this to a new version code
         versionName = flutterVersionName
     }
 
