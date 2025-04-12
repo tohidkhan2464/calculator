@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:calculator/theme_constants.dart';
 import 'package:math_expressions/math_expressions.dart';
 import 'package:flutter/material.dart';
@@ -19,11 +17,8 @@ class _MyHomePageState extends State<MyHomePage>
   late AnimationController _animationController;
   bool _hasError = false;
   BannerAd? _bannerAd;
+  BannerAd? _bannerAd2;
   bool _isAdLoaded = false;
-
-  final String _adUnitId = Platform.isAndroid
-      ? 'ca-app-pub-2552575342940499/8352470029'
-      : 'ca-app-pub-2552575342940499/8352470029';
 
   final ScrollController _expressionScrollController = ScrollController();
   static const _operators = {'+', '-', 'x', '/', '%'};
@@ -36,7 +31,7 @@ class _MyHomePageState extends State<MyHomePage>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-   
+
     _loadAd();
   }
 
@@ -56,13 +51,29 @@ class _MyHomePageState extends State<MyHomePage>
 
   Future<void> _loadAd() async {
     final size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
-      MediaQuery.of(context).size.width.truncate(),
+      300,
     );
 
-    if (size == null) return;
+    if (size == null) {
+      debugPrint(
+          'Ad size is null — possibly due to screen width being too small');
+      return;
+    }
 
     _bannerAd = BannerAd(
-      adUnitId: _adUnitId,
+      adUnitId: 'ca-app-pub-2552575342940499/8352470029', // test unit
+      request: const AdRequest(),
+      size: size,
+      listener: BannerAdListener(
+        onAdLoaded: (_) => setState(() => _isAdLoaded = true),
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+          debugPrint('BannerAd failed to load: $err');
+        },
+      ),
+    )..load();
+    _bannerAd2 = BannerAd(
+      adUnitId: 'ca-app-pub-2552575342940499/2639088270', // test unit
       request: const AdRequest(),
       size: size,
       listener: BannerAdListener(
@@ -192,7 +203,7 @@ class _MyHomePageState extends State<MyHomePage>
       final leftNum = double.parse(match.group(1)!);
       final operator = match.group(2)!;
       final percentValue = double.parse(match.group(3)!) / 100 * leftNum;
-     
+
       return operator == '+'
           ? '${leftNum + percentValue}'
           : '${leftNum - percentValue}';
@@ -216,19 +227,25 @@ class _MyHomePageState extends State<MyHomePage>
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_isAdLoaded && _bannerAd != null)
                 SizedBox(
-                  width: double.infinity,
-                  height: _bannerAd!.size.height.toDouble(),
+                  width: 300,
+                  height: 50,
                   child: AdWidget(ad: _bannerAd!),
                 ),
+              if (_isAdLoaded && _bannerAd2 != null)
+                SizedBox(
+                  width: 300,
+                  height: 50,
+                  child: AdWidget(ad: _bannerAd2!),
+                ),
               Expanded(child: _buildDisplay()),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               _buildButtonGrid(),
             ],
           ),
@@ -238,7 +255,7 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   Widget _buildDisplay() => Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(24),
@@ -249,7 +266,7 @@ class _MyHomePageState extends State<MyHomePage>
           children: [
             Expanded(
               child: Align(
-                alignment: Alignment.topRight,
+                alignment: Alignment.bottomRight,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     double fontSize = 28;
@@ -264,7 +281,8 @@ class _MyHomePageState extends State<MyHomePage>
                     TextPainter textPainter = TextPainter(
                       text: textSpan,
                       textDirection: TextDirection.ltr,
-                      maxLines: 5,
+                      maxLines: 3,
+                      textAlign: TextAlign.right,
                     );
 
                     textPainter.layout(maxWidth: constraints.maxWidth);
@@ -282,28 +300,35 @@ class _MyHomePageState extends State<MyHomePage>
                       textPainter.layout(maxWidth: constraints.maxWidth);
                     }
 
-                    return Text(
-                      _expression,
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w500,
+                    return SingleChildScrollView(
+                      controller: _expressionScrollController,
+                      scrollDirection: Axis.vertical,
+                      child: SizedBox(
+                        width: constraints.maxWidth,
+                        child: Text(
+                          _expression,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          softWrap: true,
+                          overflow: TextOverflow.visible,
+                        ),
                       ),
-                      maxLines: 5,
-                      overflow: TextOverflow.ellipsis,
                     );
                   },
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
               child: Text(
                 _result,
                 style: TextStyle(
-                  fontSize: 42,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
                   color: _hasError ? Colors.red : ThemeConstants.accentColor,
                 ),
