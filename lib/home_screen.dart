@@ -17,7 +17,6 @@ class _MyHomePageState extends State<MyHomePage>
   late AnimationController _animationController;
   bool _hasError = false;
   BannerAd? _bannerAd;
-  BannerAd? _bannerAd2;
   bool _isAdLoaded = false;
 
   final ScrollController _expressionScrollController = ScrollController();
@@ -59,21 +58,8 @@ class _MyHomePageState extends State<MyHomePage>
           'Ad size is null — possibly due to screen width being too small');
       return;
     }
-
     _bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-2552575342940499/8352470029', // test unit
-      request: const AdRequest(),
-      size: size,
-      listener: BannerAdListener(
-        onAdLoaded: (_) => setState(() => _isAdLoaded = true),
-        onAdFailedToLoad: (ad, err) {
-          ad.dispose();
-          debugPrint('BannerAd failed to load: $err');
-        },
-      ),
-    )..load();
-    _bannerAd2 = BannerAd(
-      adUnitId: 'ca-app-pub-2552575342940499/2639088270', // test unit
       request: const AdRequest(),
       size: size,
       listener: BannerAdListener(
@@ -238,12 +224,6 @@ class _MyHomePageState extends State<MyHomePage>
                   height: 50,
                   child: AdWidget(ad: _bannerAd!),
                 ),
-              if (_isAdLoaded && _bannerAd2 != null)
-                SizedBox(
-                  width: 300,
-                  height: 50,
-                  child: AdWidget(ad: _bannerAd2!),
-                ),
               Expanded(child: _buildDisplay()),
               const SizedBox(height: 10),
               _buildButtonGrid(),
@@ -322,19 +302,61 @@ class _MyHomePageState extends State<MyHomePage>
               ),
             ),
             const SizedBox(height: 5),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              child: Text(
-                _result,
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: _hasError ? Colors.red : ThemeConstants.accentColor,
-                ),
-                textAlign: TextAlign.right,
-                overflow: TextOverflow.ellipsis,
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                double resultFontSize = 36;
+                TextSpan resultSpan = TextSpan(
+                  text: _result,
+                  style: TextStyle(
+                    fontSize: resultFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: _hasError ? Colors.red : ThemeConstants.accentColor,
+                  ),
+                );
+
+                TextPainter resultPainter = TextPainter(
+                  text: resultSpan,
+                  textDirection: TextDirection.ltr,
+                  textAlign: TextAlign.right,
+                );
+
+                resultPainter.layout(maxWidth: constraints.maxWidth);
+
+                while (resultPainter.width > constraints.maxWidth &&
+                    resultFontSize > 18) {
+                  resultFontSize -= 2;
+                  resultSpan = TextSpan(
+                    text: _result,
+                    style: TextStyle(
+                      fontSize: resultFontSize,
+                      fontWeight: FontWeight.bold,
+                      color:
+                          _hasError ? Colors.red : ThemeConstants.accentColor,
+                    ),
+                  );
+                  resultPainter.text = resultSpan;
+                  resultPainter.layout(maxWidth: constraints.maxWidth);
+                }
+
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  reverse: true,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 100),
+                    curve: Curves.easeInOut,
+                    child: Text(
+                      _result,
+                      style: TextStyle(
+                        fontSize: resultFontSize,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            _hasError ? Colors.red : ThemeConstants.accentColor,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
