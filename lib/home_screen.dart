@@ -183,16 +183,25 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   String _handlePercentageOperations(String expression) {
-    final percentRegex = RegExp(r'(\d+(?:\.\d+)?)([+\-])(\d+(?:\.\d+)?)%');
+    final percentRegex = RegExp(r'(\d+(?:\.\d+)?)([+\-x/])(\d+(?:\.\d+)?)%');
 
     return expression.replaceAllMapped(percentRegex, (match) {
       final leftNum = double.parse(match.group(1)!);
       final operator = match.group(2)!;
-      final percentValue = double.parse(match.group(3)!) / 100 * leftNum;
+      final percentValue = double.parse(match.group(3)!) / 100;
 
-      return operator == '+'
-          ? '${leftNum + percentValue}'
-          : '${leftNum - percentValue}';
+      switch (operator) {
+        case '+':
+          return '${leftNum + (leftNum * percentValue)}';
+        case '-':
+          return '${leftNum - (leftNum * percentValue)}';
+        case 'x':
+          return '${leftNum * percentValue}';
+        case '/':
+          return percentValue == 0 ? 'Error' : '${leftNum / percentValue}';
+        default:
+          return match.group(0)!; // Fallback to the original match
+      }
     });
   }
 
