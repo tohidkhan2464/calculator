@@ -12,12 +12,12 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
-  String _expression = "";
   String _result = "";
   late AnimationController _animationController;
   bool _hasError = false;
   BannerAd? _bannerAd;
   bool _isAdLoaded = false;
+  final TextEditingController _expressionController = TextEditingController();
 
   final ScrollController _expressionScrollController = ScrollController();
   static const _operators = {'+', '-', 'x', '/', '%'};
@@ -26,10 +26,16 @@ class _MyHomePageState extends State<MyHomePage>
   @override
   void initState() {
     super.initState();
+    _expressionController.text = ""; // Ensure the controller is initialized
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
+
+    // Add listener to update the UI when the text changes
+    _expressionController.addListener(() {
+      setState(() {});
+    });
 
     _loadAd();
   }
@@ -42,6 +48,9 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   void dispose() {
+    _expressionController
+        .removeListener(() {}); // Remove listener to avoid memory leaks
+    _expressionController.dispose();
     _bannerAd?.dispose();
     _animationController.dispose();
     _expressionScrollController.dispose();
@@ -73,72 +82,65 @@ class _MyHomePageState extends State<MyHomePage>
   }
 
   void _buttonPressed(String value) {
+    final cursorPosition = _expressionController.selection.baseOffset;
     setState(() {
       switch (value) {
         case "AC":
           _clearAll();
           break;
         case "⌫":
-          _backspace();
+          _backspace(cursorPosition);
           break;
         case "=":
           _finalizeResult();
           break;
         default:
-          if (_isOperator(value)) {
-            if (_expression.isEmpty) {
-              if (value == '-') _expression = value;
-            } else if (_isOperator(_expression.characters.last) &&
-                value == '-' &&
-                (_expression.characters.last == 'x' ||
-                    _expression.characters.last == '/')) {
-              _expression += value;
-            } else if (_isOperator(_expression.characters.last) &&
-                _expression.characters.last != '%') {
-              _expression =
-                  _expression.substring(0, _expression.length - 1) + value;
-            } else {
-              _expression += value;
-            }
-          } else {
-            if (value == '.' &&
-                (_expression.isEmpty ||
-                    _isOperator(_expression.characters.last))) {
-              _expression += '0.';
-            } else if (value == '.') {
-              final parts = _expression.split(RegExp(r'[+\-x/]'));
-              if (!parts.last.contains('.')) {
-                _expression += value;
-              }
-            } else if ((value == '0' || value == '00') && _expression == '0') {
-            } else {
-              _expression += value;
-            }
-          }
-
-          _hasError = false;
-          if (_expression.isNotEmpty) _calculateResult();
-          _scrollToEnd();
+          _insertAtCursor(value, cursorPosition);
+          break;
       }
     });
   }
 
   void _clearAll() {
-    _expression = "";
+    _expressionController.text = "";
     _result = "";
     _hasError = false;
   }
 
-  void _backspace() {
-    if (_expression.isEmpty) return;
-    _expression = _expression.substring(0, _expression.length - 1);
+  void _backspace(int cursorPosition) {
+    if (_expressionController.text.isEmpty || cursorPosition <= 0) return;
+    final text = _expressionController.text;
+    _expressionController.text =
+        text.substring(0, cursorPosition - 1) + text.substring(cursorPosition);
+    _expressionController.selection = TextSelection.fromPosition(
+      TextPosition(offset: cursorPosition - 1),
+    );
     _hasError = false;
-    _expression.isEmpty ? _result = "" : _calculateResult();
+    _expressionController.text.isEmpty ? _result = "" : _calculateResult();
+  }
+
+  void _insertAtCursor(String value, int cursorPosition) {
+    final text = _expressionController.text;
+
+    // Ensure cursorPosition is valid
+    if (cursorPosition < 0 || cursorPosition > text.length) {
+      cursorPosition = text.length; // Default to the end of the text
+    }
+
+    _expressionController.text = text.substring(0, cursorPosition) +
+        value +
+        text.substring(cursorPosition);
+    _expressionController.selection = TextSelection.fromPosition(
+      TextPosition(offset: cursorPosition + value.length),
+    );
+    _hasError = false;
+    if (_expressionController.text.isNotEmpty) _calculateResult();
+    _scrollToEnd();
   }
 
   void _finalizeResult() {
     if (_result.isNotEmpty && !_hasError) {
-      _expression = _result;
+      _expressionController.text = _result;
       _result = "";
     }
   }
@@ -146,15 +148,15 @@ class _MyHomePageState extends State<MyHomePage>
   bool _isOperator(String value) => _operators.contains(value);
 
   void _calculateResult() {
-    if (_expression.isEmpty) {
+    if (_expressionController.text.isEmpty) {
       _result = "";
       return;
     }
 
     // Remove trailing operator for evaluation
-    String expressionToEvaluate = _expression;
+    String expressionToEvaluate = _expressionController.text;
     if (_isOperator(expressionToEvaluate.characters.last) &&
-        _expression.characters.last != '%') {
+        _expressionController.text.characters.last != '%') {
       expressionToEvaluate =
           expressionToEvaluate.substring(0, expressionToEvaluate.length - 1);
     }
@@ -256,56 +258,28 @@ class _MyHomePageState extends State<MyHomePage>
             Expanded(
               child: Align(
                 alignment: Alignment.bottomRight,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    double fontSize = 28;
-                    TextSpan textSpan = TextSpan(
-                      text: _expression,
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    );
-
-                    TextPainter textPainter = TextPainter(
-                      text: textSpan,
-                      textDirection: TextDirection.ltr,
-                      maxLines: 3,
-                      textAlign: TextAlign.right,
-                    );
-
-                    textPainter.layout(maxWidth: constraints.maxWidth);
-
-                    while (textPainter.didExceedMaxLines && fontSize > 14) {
-                      fontSize -= 2;
-                      textSpan = TextSpan(
-                        text: _expression,
-                        style: TextStyle(
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      );
-                      textPainter.text = textSpan;
-                      textPainter.layout(maxWidth: constraints.maxWidth);
-                    }
-
-                    return SingleChildScrollView(
-                      controller: _expressionScrollController,
-                      scrollDirection: Axis.vertical,
-                      child: SizedBox(
-                        width: constraints.maxWidth,
-                        child: Text(
-                          _expression,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          softWrap: true,
-                          overflow: TextOverflow.visible,
-                        ),
-                      ),
-                    );
+                child: TextField(
+                  controller: _expressionController,
+                  textAlign: TextAlign.right,
+                  textAlignVertical: TextAlignVertical.bottom,
+                  maxLines: null,
+                  autofocus: true,
+                  onTapOutside: (event) =>
+                      FocusScope.of(context).requestFocus(),
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                  ),
+                  showCursor: true,
+                  cursorColor: ThemeConstants.accentColor,
+                  cursorWidth: 2.0,
+                  onChanged: (value) {
+                    setState(() {
+                      _calculateResult();
+                    });
                   },
                 ),
               ),
