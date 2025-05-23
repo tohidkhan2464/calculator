@@ -20,7 +20,7 @@ class _MyHomePageState extends State<MyHomePage>
   final TextEditingController _expressionController = TextEditingController();
 
   final ScrollController _expressionScrollController = ScrollController();
-  static const _operators = {'+', '-', 'x', '/', '%'};
+  static const _operators = {'+', '-', 'x', '÷', '%', '-/+'};
   static const _numberFormat = NumberFormatInfo(maxDecimalPlaces: 8);
 
   @override
@@ -37,13 +37,19 @@ class _MyHomePageState extends State<MyHomePage>
       setState(() {});
     });
 
-    _loadAd();
+    // _loadAd();
+    // // Schedule _loadAd to run every 5 minutes
+    // Future.doWhile(() async {
+    //   await Future.delayed(const Duration(minutes: 5));
+    //   if (mounted) _loadAd();
+    //   return mounted;
+    // });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isAdLoaded) _loadAd();
+    // if (!_isAdLoaded) _loadAd();
   }
 
   @override
@@ -88,14 +94,77 @@ class _MyHomePageState extends State<MyHomePage>
         case "AC":
           _clearAll();
           break;
+        case 'SQFT':
+          if (_expressionController.text.isNotEmpty) {
+            // Wrap the current expression in parentheses and append /144
+            final text = _expressionController.text;
+            _expressionController.text = '($text)÷144';
+            _expressionController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _expressionController.text.length),
+            );
+            // Do not finalize result here; let user press '='
+            _calculateResult();
+            _finalizeResult();
+          }
+          break;
+        case "CFT":
+          if (_expressionController.text.isNotEmpty) {
+            // Wrap the current expression in parentheses and append /144
+            final text = _expressionController.text;
+            _expressionController.text = '($text)÷1728';
+            _expressionController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _expressionController.text.length),
+            );
+            // Do not finalize result here; let user press '='
+            _calculateResult();
+            _finalizeResult();
+          }
         case "⌫":
           _backspace(cursorPosition);
           break;
         case "=":
           _finalizeResult();
           break;
+
+        case "-/+":
+          // Toggle the sign of the last number, also handle the case when the last character is an operator and add the last number within the parenthesis
+          if (_expressionController.text.isEmpty) return;
+          final text = _expressionController.text;
+          final lastOperatorIndex = text.lastIndexOf(RegExp(r'[+\-x/÷]'));
+          final lastNumber = text.substring(
+            lastOperatorIndex + 1,
+            text.length,
+          );
+
+          // Check if lastNumber is already in the form of (-number)
+          // If it is, remove the parentheses and negative sign
+          // If it is not, add the parentheses and negative sign
+          if (lastNumber.startsWith('(') && lastNumber.endsWith(')')) {
+            final innerNumber = lastNumber.substring(1, lastNumber.length - 1);
+            _expressionController.text = text.substring(
+                  0,
+                  lastOperatorIndex + 1,
+                ) +
+                innerNumber;
+          } else {
+            _expressionController.text =
+                '${text.substring(0, lastOperatorIndex + 1)}(-$lastNumber)';
+          }
+
+          _calculateResult();
+          break;
         default:
-          _insertAtCursor(value, cursorPosition);
+          if (_expressionController.text.isNotEmpty &&
+              _isOperator(_expressionController.text.characters.last) &&
+              _isOperator(value) &&
+              value != "%") {
+            // If the last character is an operator and the new value is also an operator, replace the last character with the new value
+            _expressionController.text =
+                _expressionController.text.substring(0, cursorPosition - 1) +
+                    value;
+          } else {
+            _insertAtCursor(value, cursorPosition);
+          }
           break;
       }
     });
@@ -166,6 +235,7 @@ class _MyHomePageState extends State<MyHomePage>
       String parsedExpression =
           _handlePercentageOperations(expressionToEvaluate);
       parsedExpression = parsedExpression.replaceAll('x', '*');
+      parsedExpression = parsedExpression.replaceAll('÷', '/');
 
       Parser p = Parser();
       Expression expr = p.parse(parsedExpression);
@@ -199,7 +269,7 @@ class _MyHomePageState extends State<MyHomePage>
           return '${leftNum - (leftNum * percentValue)}';
         case 'x':
           return '${leftNum * percentValue}';
-        case '/':
+        case '÷':
           return percentValue == 0 ? 'Error' : '${leftNum / percentValue}';
         default:
           return match.group(0)!; // Fallback to the original match
@@ -264,6 +334,8 @@ class _MyHomePageState extends State<MyHomePage>
                   textAlignVertical: TextAlignVertical.bottom,
                   maxLines: null,
                   autofocus: true,
+                  readOnly: true,
+                  scrollController: _expressionScrollController,
                   onTapOutside: (event) =>
                       FocusScope.of(context).requestFocus(),
                   style: const TextStyle(
@@ -279,6 +351,7 @@ class _MyHomePageState extends State<MyHomePage>
                   onChanged: (value) {
                     setState(() {
                       _calculateResult();
+                      _scrollToEnd();
                     });
                   },
                 ),
@@ -341,6 +414,90 @@ class _MyHomePageState extends State<MyHomePage>
                 );
               },
             ),
+            Padding(
+              padding: const EdgeInsets.only(left: 10, bottom: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => _buttonPressed('SQFT'),
+                    child: TweenAnimationBuilder(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 200),
+                      builder: (context, double value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _getButtonColor(ButtonType.calculations),
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            width: 2,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(5.0),
+                          child: Center(
+                            child: Text(
+                              'SQFT',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: _getTextColor(
+                                    ButtonType.calculations, 'SQFT'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: () => _buttonPressed('CFT'),
+                    child: TweenAnimationBuilder(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 200),
+                      builder: (context, double value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _getButtonColor(ButtonType.calculations),
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                            width: 2,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(5.0),
+                          child: Center(
+                            child: Text(
+                              'CFT',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: _getTextColor(
+                                    ButtonType.calculations, 'CFT'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -355,9 +512,9 @@ class _MyHomePageState extends State<MyHomePage>
       crossAxisSpacing: 12,
       children: [
         _buildButton("AC", ButtonType.function),
-        _buildButton("%", ButtonType.operator),
-        _buildButton("/", ButtonType.operator),
-        _buildButton("⌫", ButtonType.function),
+        _buildButton("⌫", ButtonType.operator),
+        _buildButton("-/+", ButtonType.function),
+        _buildButton("÷", ButtonType.operator),
         _buildButton("7", ButtonType.number),
         _buildButton("8", ButtonType.number),
         _buildButton("9", ButtonType.number),
@@ -370,7 +527,7 @@ class _MyHomePageState extends State<MyHomePage>
         _buildButton("2", ButtonType.number),
         _buildButton("3", ButtonType.number),
         _buildButton("+", ButtonType.operator),
-        _buildButton("00", ButtonType.number),
+        _buildButton("%", ButtonType.operator),
         _buildButton("0", ButtonType.number),
         _buildButton(".", ButtonType.number),
         _buildButton("=", ButtonType.equals),
@@ -425,6 +582,8 @@ class _MyHomePageState extends State<MyHomePage>
         return Colors.grey.shade300;
       case ButtonType.equals:
         return ThemeConstants.accentColor;
+      case ButtonType.calculations:
+        return Colors.transparent;
       case ButtonType.number:
       default:
         return Colors.white;
@@ -439,6 +598,8 @@ class _MyHomePageState extends State<MyHomePage>
         return ThemeConstants.accentColor;
       case ButtonType.equals:
         return Colors.white;
+      case ButtonType.calculations:
+        return Colors.black87;
       case ButtonType.number:
       default:
         return Colors.black87;
@@ -460,9 +621,4 @@ class NumberFormatInfo {
   }
 }
 
-enum ButtonType {
-  number,
-  operator,
-  function,
-  equals,
-}
+enum ButtonType { number, operator, function, equals, calculations }
