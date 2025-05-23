@@ -37,19 +37,19 @@ class _MyHomePageState extends State<MyHomePage>
       setState(() {});
     });
 
-    // _loadAd();
-    // // Schedule _loadAd to run every 5 minutes
-    // Future.doWhile(() async {
-    //   await Future.delayed(const Duration(minutes: 5));
-    //   if (mounted) _loadAd();
-    //   return mounted;
-    // });
+    _loadAd();
+    // Schedule _loadAd to run every 5 minutes
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(minutes: 5));
+      if (mounted) _loadAd();
+      return mounted;
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // if (!_isAdLoaded) _loadAd();
+    if (!_isAdLoaded) _loadAd();
   }
 
   @override
