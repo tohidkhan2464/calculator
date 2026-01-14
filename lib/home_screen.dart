@@ -292,22 +292,26 @@ class _MyHomePageState extends State<MyHomePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: ThemeConstants.primaryColor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_isAdLoaded && _bannerAd != null)
-                SizedBox(
-                  width: 300,
-                  height: 50,
+                Container(
+                  alignment: Alignment.center,
+                  width: _bannerAd!.size.width.toDouble(),
+                  height: _bannerAd!.size.height.toDouble(),
+                  margin: const EdgeInsets.only(bottom: 5),
                   child: AdWidget(ad: _bannerAd!),
                 ),
               Expanded(child: _buildDisplay()),
               const SizedBox(height: 10),
               _buildButtonGrid(),
+              const SizedBox(height: 5),
             ],
           ),
         ),
@@ -315,204 +319,180 @@ class _MyHomePageState extends State<MyHomePage>
     );
   }
 
-  Widget _buildDisplay() => Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Align(
-                alignment: Alignment.bottomRight,
-                child: TextField(
-                  controller: _expressionController,
-                  textAlign: TextAlign.right,
-                  textAlignVertical: TextAlignVertical.bottom,
-                  maxLines: null,
-                  autofocus: true,
-                  readOnly: true,
-                  scrollController: _expressionScrollController,
-                  onTapOutside: (event) =>
-                      FocusScope.of(context).requestFocus(),
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                  ),
-                  showCursor: true,
-                  cursorColor: ThemeConstants.accentColor,
-                  cursorWidth: 2.0,
-                  onChanged: (value) {
-                    setState(() {
-                      _calculateResult();
-                      _scrollToEnd();
-                    });
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 5),
-            LayoutBuilder(
+  Widget _buildDisplay() => Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: LayoutBuilder(
               builder: (context, constraints) {
-                double resultFontSize = 36;
-                TextSpan resultSpan = TextSpan(
-                  text: _result,
-                  style: TextStyle(
-                    fontSize: resultFontSize,
-                    fontWeight: FontWeight.bold,
-                    color: _hasError ? Colors.red : ThemeConstants.accentColor,
-                  ),
-                );
+                double fontSize = 38.0;
+                final text = _expressionController.text;
 
-                TextPainter resultPainter = TextPainter(
-                  text: resultSpan,
-                  textDirection: TextDirection.ltr,
-                  textAlign: TextAlign.right,
-                );
-
-                resultPainter.layout(maxWidth: constraints.maxWidth);
-
-                while (resultPainter.width > constraints.maxWidth &&
-                    resultFontSize > 18) {
-                  resultFontSize -= 2;
-                  resultSpan = TextSpan(
-                    text: _result,
-                    style: TextStyle(
-                      fontSize: resultFontSize,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          _hasError ? Colors.red : ThemeConstants.accentColor,
-                    ),
+                if (text.isNotEmpty) {
+                  TextStyle style = TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w300,
                   );
-                  resultPainter.text = resultSpan;
-                  resultPainter.layout(maxWidth: constraints.maxWidth);
+                  TextPainter textPainter = TextPainter(
+                    text: TextSpan(text: text, style: style),
+                    textDirection: TextDirection.ltr,
+                    maxLines: 1,
+                  );
+                  textPainter.layout();
+
+                  while (textPainter.width > constraints.maxWidth &&
+                      fontSize > 20) {
+                    fontSize -= 2;
+                    style = TextStyle(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w300,
+                    );
+                    textPainter.text = TextSpan(text: text, style: style);
+                    textPainter.layout();
+                  }
                 }
 
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  reverse: true,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 100),
-                    curve: Curves.easeInOut,
-                    child: Text(
-                      _result,
-                      style: TextStyle(
-                        fontSize: resultFontSize,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            _hasError ? Colors.red : ThemeConstants.accentColor,
-                      ),
+                return Align(
+                  alignment: Alignment.bottomRight,
+                  child: SingleChildScrollView(
+                    reverse: true,
+                    child: TextField(
+                      controller: _expressionController,
                       textAlign: TextAlign.right,
+                      textAlignVertical: TextAlignVertical.bottom,
+                      maxLines: null,
+                      autofocus: true,
+                      readOnly: true,
+                      scrollController: _expressionScrollController,
+                      onTapOutside: (event) =>
+                          FocusScope.of(context).requestFocus(),
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w300,
+                        color: ThemeConstants.textColor,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      showCursor: true,
+                      cursorColor: ThemeConstants.accentColor,
+                      cursorWidth: 3.0,
+                      cursorRadius: const Radius.circular(2),
+                      onChanged: (value) {
+                        setState(() {
+                          _calculateResult();
+                          _scrollToEnd();
+                        });
+                      },
                     ),
                   ),
                 );
               },
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 10, bottom: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: () => _buttonPressed('SQFT'),
-                    child: TweenAnimationBuilder(
-                      tween: Tween<double>(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 200),
-                      builder: (context, double value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: _getButtonColor(ButtonType.calculations),
-                          borderRadius: BorderRadius.circular(100),
-                          border: Border.all(
-                            color: const Color.fromARGB(255, 0, 0, 0),
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(5.0),
-                          child: Center(
-                            child: Text(
-                              'SQFT',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: _getTextColor(
-                                    ButtonType.calculations, 'SQFT'),
-                              ),
-                            ),
-                          ),
-                        ),
+          ),
+          const SizedBox(height: 5),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              double resultFontSize = 48;
+              if (_result.isNotEmpty) {
+                TextStyle style = TextStyle(
+                  fontSize: resultFontSize,
+                  fontWeight: FontWeight.bold,
+                  color: _hasError
+                      ? ThemeConstants.errorColor
+                      : ThemeConstants.accentColor,
+                );
+                TextPainter textPainter = TextPainter(
+                  text: TextSpan(text: _result, style: style),
+                  textDirection: TextDirection.ltr,
+                  maxLines: 1,
+                );
+                textPainter.layout();
+
+                while (textPainter.width > constraints.maxWidth &&
+                    resultFontSize > 20) {
+                  resultFontSize -= 2;
+                  style = TextStyle(
+                    fontSize: resultFontSize,
+                    fontWeight: FontWeight.w300,
+                  );
+                  textPainter.text = TextSpan(text: _result, style: style);
+                  textPainter.layout();
+                }
+              }
+              return Align(
+                alignment: Alignment.bottomRight,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  reverse: true,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    child: Text(
+                      _result,
+                      style: TextStyle(
+                        fontSize: resultFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: _hasError
+                            ? ThemeConstants.errorColor
+                            : ThemeConstants.accentColor,
                       ),
+                      textAlign: TextAlign.right,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () => _buttonPressed('CFT'),
-                    child: TweenAnimationBuilder(
-                      tween: Tween<double>(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 200),
-                      builder: (context, double value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: _getButtonColor(ButtonType.calculations),
-                          borderRadius: BorderRadius.circular(100),
-                          border: Border.all(
-                            color: const Color.fromARGB(255, 0, 0, 0),
-                            width: 2,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(5.0),
-                          child: Center(
-                            child: Text(
-                              'CFT',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: _getTextColor(
-                                    ButtonType.calculations, 'CFT'),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildUnitButton('SQFT'),
+              _buildUnitButton('CFT'),
+            ],
+          ),
+        ],
       );
+
+  Widget _buildUnitButton(String label) {
+    return GestureDetector(
+      onTap: () => _buttonPressed(label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: ThemeConstants.secondaryColor,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(
+            color: ThemeConstants.accentColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: ThemeConstants.textColor,
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildButtonGrid() {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 4,
-      childAspectRatio: 1.1,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
+      childAspectRatio: 1.0, // Make buttons perfectly circular
+      mainAxisSpacing: 14,
+      crossAxisSpacing: 14,
       children: [
         _buildButton("AC", ButtonType.function),
-        _buildButton("⌫", ButtonType.operator),
+        _buildButton("⌫", ButtonType.function),
         _buildButton("-/+", ButtonType.function),
         _buildButton("÷", ButtonType.operator),
         _buildButton("7", ButtonType.number),
@@ -527,7 +507,7 @@ class _MyHomePageState extends State<MyHomePage>
         _buildButton("2", ButtonType.number),
         _buildButton("3", ButtonType.number),
         _buildButton("+", ButtonType.operator),
-        _buildButton("%", ButtonType.operator),
+        _buildButton("%", ButtonType.number),
         _buildButton("0", ButtonType.number),
         _buildButton(".", ButtonType.number),
         _buildButton("=", ButtonType.equals),
@@ -538,35 +518,19 @@ class _MyHomePageState extends State<MyHomePage>
   Widget _buildButton(String value, ButtonType type) {
     return GestureDetector(
       onTap: () => _buttonPressed(value),
-      child: TweenAnimationBuilder(
-        tween: Tween<double>(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 200),
-        builder: (context, double value, child) {
-          return Transform.scale(
-            scale: value,
-            child: child,
-          );
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: _getButtonColor(type),
-            borderRadius: BorderRadius.circular(100),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: _getTextColor(type, value),
-              ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _getButtonColor(type),
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight:
+                  type == ButtonType.number ? FontWeight.w400 : FontWeight.bold,
+              color: _getTextColor(type, value),
             ),
           ),
         ),
@@ -577,32 +541,32 @@ class _MyHomePageState extends State<MyHomePage>
   Color _getButtonColor(ButtonType type) {
     switch (type) {
       case ButtonType.function:
-        return Colors.grey.shade200;
+        return ThemeConstants.btnFunction;
       case ButtonType.operator:
-        return Colors.grey.shade300;
+        return ThemeConstants.btnOperator;
       case ButtonType.equals:
         return ThemeConstants.accentColor;
       case ButtonType.calculations:
-        return Colors.transparent;
+        return ThemeConstants.secondaryColor;
       case ButtonType.number:
       default:
-        return Colors.white;
+        return ThemeConstants.btnNumber;
     }
   }
 
   Color _getTextColor(ButtonType type, String value) {
     switch (type) {
       case ButtonType.function:
-        return value == "AC" ? Colors.red : Colors.black87;
+        return ThemeConstants.textColor;
       case ButtonType.operator:
         return ThemeConstants.accentColor;
       case ButtonType.equals:
-        return Colors.white;
+        return Colors.black;
       case ButtonType.calculations:
-        return Colors.black87;
+        return ThemeConstants.textColor;
       case ButtonType.number:
       default:
-        return Colors.black87;
+        return ThemeConstants.textColor;
     }
   }
 }

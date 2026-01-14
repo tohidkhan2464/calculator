@@ -36,7 +36,7 @@ class SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     Timer(
-      const Duration(seconds: 2),
+      const Duration(milliseconds: 1000),
       () {
         Navigator.pushReplacement(
           context,
@@ -72,15 +72,17 @@ class SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    var currentTheme = Theme.of(context);
     return Scaffold(
+      backgroundColor: ThemeConstants.primaryColor,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white,
               ThemeConstants.secondaryColor,
+              ThemeConstants.primaryColor,
             ],
           ),
         ),
@@ -91,19 +93,26 @@ class SplashScreenState extends State<SplashScreen>
               ScaleTransition(
                 scale: _animation,
                 child: SizedBox(
-                  height: 100,
-                  child: Image.asset('logo/logo.png'),
+                  height: 120, // Slightly larger logo
+                  child: currentTheme == ThemeData.light()
+                      ? Image.asset(
+                          'logo/logo_light.png',
+                        )
+                      : Image.asset(
+                          'logo/logo_dark.png',
+                        ), // Tint logo
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               FadeTransition(
                 opacity: _animation,
                 child: const Text(
                   'Calculator',
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: ThemeConstants.accentColor,
+                    color: ThemeConstants.textColor,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
